@@ -1,0 +1,36 @@
+# Visual Studio
+.vs/
+bin/
+obj/
+*.user
+*.suo
+
+
+# Build output
+bin/
+obj/
+Debug/
+Release/
+
+# IDE
+*.dbmdl
+*.log
+*.ncb
+*.opendb
+*.sdf
+*.cache
+*.pdb
+*.ipch
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+*.nuspec
+
+# Misc
+[Tt]emp/
+*.tmp
+*.bak
+*.swp
+*.DS_Store

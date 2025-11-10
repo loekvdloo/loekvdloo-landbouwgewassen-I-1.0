@@ -1,0 +1,17 @@
+{
+  "tarwe": {
+    "naam": "Tarwe",
+    "groeitijd_dagen": 120,
+    "beschrijving": "Tarwe is een graan dat veel in gematigde klimaten wordt verbouwd."
+  },
+  "ma�s": {
+    "naam": "Ma�s",
+    "groeitijd_dagen": 90,
+    "beschrijving": "Ma�s (mais) wordt gebruikt voor voer, voedsel en biobrandstof."
+  },
+  "aardappel": {
+    "naam": "Aardappel",
+    "groeitijd_dagen": 80,
+    "beschrijving": "Aardappelen zijn knolgewassen met veel vari�teiten."
+  }
+}
