@@ -8,7 +8,7 @@ namespace LandbouwgewassenI.Commands
 {
     public class GeneralModule : ModuleBase<SocketCommandContext>
     {
-        private const string DataPath = "data/gewassen.json";
+        private static readonly string DataPath = Path.Combine(AppContext.BaseDirectory, "data", "gewassen.json");
 
         [Command("hallo")]
         public async Task HalloAsync()

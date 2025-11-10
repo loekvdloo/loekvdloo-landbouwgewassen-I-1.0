@@ -34,8 +34,7 @@ namespace LandbouwgewassenI
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
             _client.MessageReceived += HandleCommandAsync;
 
-
-
+           
             if (string.IsNullOrWhiteSpace(bott))
             {
                 Console.WriteLine("Fout:  is niet ingesteld.");
