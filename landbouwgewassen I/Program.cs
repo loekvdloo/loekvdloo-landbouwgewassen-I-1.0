@@ -9,7 +9,7 @@ using Discord.WebSocket;
 namespace LandbouwgewassenI
 {
     class Program
-    {
+    {=
         private DiscordSocketClient _client;
         private CommandService _commands;
 
