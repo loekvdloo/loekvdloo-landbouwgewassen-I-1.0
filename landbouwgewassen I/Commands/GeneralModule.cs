@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Text.Json;
 using System.Collections.Generic;
+using Discord;
 
 namespace LandbouwgewassenI.Commands
 {
@@ -65,6 +66,24 @@ namespace LandbouwgewassenI.Commands
             {
                 await ReplyAsync($"Geen info gevonden voor '{gewasnaam}'. Probeer bv. tarwe, maïs, aardappel.");
             }
+
+        }
+
+        [Command("menu")]
+        private async Task MenuAsync()
+        {
+            var builder = new ComponentBuilder()
+                .WithButton("💰 Coin", "menu_coin", ButtonStyle.Primary)
+                .WithButton("ℹ️ Help", "menu_help", ButtonStyle.Secondary)
+                .WithButton("🌾 Gewasinfo", "menu_gewas", ButtonStyle.Success);
+
+            var embed = new EmbedBuilder()
+                .WithTitle("📋 Landbouwgewassen Menu")
+                .WithDescription("Kies een optie hieronder:")
+                .WithColor(Color.Green)
+                .Build();
+
+            await ReplyAsync(embed: embed, components: builder.Build());
         }
 
         private class Gewas

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -11,6 +12,7 @@ namespace LandbouwgewassenI
     {
         private DiscordSocketClient _client;
         private CommandService _commands;
+
 
         static async Task Main(string[] args)
             => await new Program().MainAsync();
@@ -29,13 +31,15 @@ namespace LandbouwgewassenI
             _client.Log += LogAsync;
             _commands.Log += LogAsync;
 
-            // Registreer commands, zonder DI
+            // Registreer commands
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
+
             _client.MessageReceived += HandleCommandAsync;
+            _client.ButtonExecuted += HandleButtonAsync; // 👈 Voor de knoppen
 
             if (string.IsNullOrWhiteSpace(bott))
             {
-                Console.WriteLine("Fout:  is niet ingesteld.");
+                Console.WriteLine("Fout: Token is niet ingesteld.");
                 return;
             }
 
@@ -52,6 +56,7 @@ namespace LandbouwgewassenI
             return Task.CompletedTask;
         }
 
+        // 📩 Wanneer iemand een bericht stuurt dat met ! begint
         private async Task HandleCommandAsync(SocketMessage rawMsg)
         {
             if (!(rawMsg is SocketUserMessage msg)) return;
@@ -60,13 +65,38 @@ namespace LandbouwgewassenI
             int argPos = 0;
             if (!(msg.HasCharPrefix('!', ref argPos)
                   || msg.HasMentionPrefix(_client.CurrentUser, ref argPos))) return;
-            
+
             var context = new SocketCommandContext(_client, msg);
             var result = await _commands.ExecuteAsync(context, argPos, null);
 
             if (!result.IsSuccess)
             {
-                await context.Channel.SendMessageAsync($"Er ging iets mis: {result.ErrorReason}");
+                await context.Channel.SendMessageAsync($"⚠️ Er ging iets mis: {result.ErrorReason}");
+            }
+        }
+
+        // 🎛️ Wanneer iemand op een knop klikt
+        private async Task HandleButtonAsync(SocketMessageComponent component)
+        {
+            switch (component.Data.CustomId)
+            {
+                case "menu_coin":
+                    Database.AddCoins(component.User.Id, 1);
+                    int coins = Database.GetCoins(component.User.Id);
+                    await component.RespondAsync($"💰 {component.User.Mention}, je hebt nu {coins} coins!");
+                    break;
+
+                case "menu_help":
+                    await component.RespondAsync("🌾 Beschikbare commando's:\n`!hallo`\n`!gewasinfo <naam>`\n`!coin`\n`!doei`");
+                    break;
+
+                case "menu_gewas":
+                    await component.RespondAsync("Gebruik `!gewasinfo <naam>` (bijv. `!gewasinfo tarwe`).");
+                    break;
+
+                default:
+                    await component.RespondAsync("❓ Onbekende knop.");
+                    break;
             }
         }
     }
