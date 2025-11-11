@@ -1,7 +1,7 @@
 {
   "tarwe": {
     "naam": "Tarwe",
-    "groeitijd_dagen": 120,
+    "groeitijd_dagen": 10,
     "beschrijving": "Tarwe is een graan dat veel in gematigde klimaten wordt verbouwd."
   },
   "ma�s": {
