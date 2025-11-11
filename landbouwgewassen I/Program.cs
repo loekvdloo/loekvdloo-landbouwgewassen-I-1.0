@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using System.Reflection;
 
 namespace LandbouwgewassenI
 {
@@ -33,8 +32,6 @@ namespace LandbouwgewassenI
             // Registreer commands, zonder DI
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
             _client.MessageReceived += HandleCommandAsync;
-
-           
 
             if (string.IsNullOrWhiteSpace(bott))
             {
