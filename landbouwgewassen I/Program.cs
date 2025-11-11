@@ -1,21 +1,23 @@
 ﻿using System;
-using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using LandbouwgewassenI.Commands;
 
 namespace LandbouwgewassenI
 {
     class Program
-    {=
-        private DiscordSocketClient _client;
-        private CommandService _commands;
+    {
+        private DiscordSocketClient? _client;
+        private CommandService? _commands;
 
 
         static async Task Main(string[] args)
-            => await new Program().MainAsync();
+        {
+            await new Program().MainAsync();
+        }
 
         public async Task MainAsync()
         {
@@ -31,22 +33,34 @@ namespace LandbouwgewassenI
             _client.Log += LogAsync;
             _commands.Log += LogAsync;
 
-            // Registreer commands
+            // Voeg modules toe
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), null);
 
             _client.MessageReceived += HandleCommandAsync;
-            _client.ButtonExecuted += HandleButtonAsync; // 👈 Voor de knoppen
+
+            // ButtonExecuted handler
+            _client.ButtonExecuted += async component =>
+            {
+                if (component.Data.CustomId.StartsWith("cell_"))
+                {
+                    await FarmModule.HandleFarmButtonAsync(component);
+                }
+                else
+                {
+                    await HandleMenuButtons(component);
+                }
+            };
 
             if (string.IsNullOrWhiteSpace(bott))
             {
-                Console.WriteLine("Fout: Token is niet ingesteld.");
+                Console.WriteLine("❌ Bot token is niet ingesteld.");
                 return;
             }
 
             await _client.LoginAsync(TokenType.Bot, bott);
             await _client.StartAsync();
 
-            Console.WriteLine("🌱 Landbouwgewassen I is gestart!");
+            Console.WriteLine("🌱 Bot gestart!");
             await Task.Delay(-1);
         }
 
@@ -56,7 +70,7 @@ namespace LandbouwgewassenI
             return Task.CompletedTask;
         }
 
-        // 📩 Wanneer iemand een bericht stuurt dat met ! begint
+        // Command handler
         private async Task HandleCommandAsync(SocketMessage rawMsg)
         {
             if (!(rawMsg is SocketUserMessage msg)) return;
@@ -64,10 +78,10 @@ namespace LandbouwgewassenI
 
             int argPos = 0;
             if (!(msg.HasCharPrefix('!', ref argPos)
-                  || msg.HasMentionPrefix(_client.CurrentUser, ref argPos))) return;
+                  || msg.HasMentionPrefix(_client.CurrentUser!, ref argPos))) return;
 
-            var context = new SocketCommandContext(_client, msg);
-            var result = await _commands.ExecuteAsync(context, argPos, null);
+            var context = new SocketCommandContext(_client!, msg);
+            var result = await _commands!.ExecuteAsync(context, argPos, null);
 
             if (!result.IsSuccess)
             {
@@ -75,8 +89,8 @@ namespace LandbouwgewassenI
             }
         }
 
-        // 🎛️ Wanneer iemand op een knop klikt
-        private async Task HandleButtonAsync(SocketMessageComponent component)
+        // Menu-knoppen handler
+        private async Task HandleMenuButtons(SocketMessageComponent component)
         {
             switch (component.Data.CustomId)
             {
@@ -95,7 +109,7 @@ namespace LandbouwgewassenI
                     break;
 
                 default:
-                    await component.RespondAsync("❓ Onbekende knop.");
+                    await component.RespondAsync("❓ Onbekende knop.", ephemeral: true);
                     break;
             }
         }
