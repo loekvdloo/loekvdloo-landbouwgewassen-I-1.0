@@ -12,7 +12,7 @@ namespace LandbouwgewassenI
     {
         private DiscordSocketClient? _client;
         private CommandService? _commands;
-
+    
 
         static async Task Main(string[] args)
         {
