@@ -2,182 +2,143 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace LandbouwgewassenI.Commands
 {
     public class FarmModule : ModuleBase<SocketCommandContext>
     {
         private static readonly string DataPath = Path.Combine(AppContext.BaseDirectory, "data", "gewassen.json");
+        private Dictionary<string, Gewas> gewassen = new();
 
-        private static readonly Dictionary<ulong, Dictionary<string, (DateTime startTime, string gewas)>> UserFarmData = new();
-        private static readonly Dictionary<ulong, IUserMessage> UserFarmMessages = new();
-
-        private static System.Timers.Timer refreshTimer;
-
-        static FarmModule()
+        public FarmModule()
         {
-            refreshTimer = new System.Timers.Timer(3000); // elke 3 sec
-            refreshTimer.Elapsed += async (s, e) => await RefreshAllFarmMessages();
-            refreshTimer.Start();
+            if (File.Exists(DataPath))
+            {
+                var json = File.ReadAllText(DataPath);
+                gewassen = JsonSerializer.Deserialize<Dictionary<string, Gewas>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? new Dictionary<string, Gewas>();
+            }
         }
 
         [Command("farm")]
-        public async Task FarmCommandAsync()
+        public async Task FarmAsync()
         {
-            if (!File.Exists(DataPath))
-            {
-                await ReplyAsync("❌ Gewassen data niet gevonden.");
-                return;
-            }
-
-            var json = await File.ReadAllTextAsync(DataPath);
-            var gewassen = JsonSerializer.Deserialize<Dictionary<string, Gewas>>(json) ?? new Dictionary<string, Gewas>();
-
             if (!gewassen.ContainsKey("tarwe"))
             {
-                await ReplyAsync("❌ Gewas tarwe niet gevonden in de data.");
+                await ReplyAsync("❌ Tarwe niet gevonden in gewassen.json.");
                 return;
             }
 
             var tarwe = gewassen["tarwe"];
-
-            if (!UserFarmData.ContainsKey(Context.User.Id))
-                UserFarmData[Context.User.Id] = new Dictionary<string, (DateTime, string)>();
-
-            var builder = BuildFarmButtons(Context.User.Id, tarwe);
-
-            var embed = new EmbedBuilder()
-                .WithTitle("🌾 Boerderij")
-                .WithDescription("Klik op een vakje om te planten of voor coins als het gegroeid is!")
-                .WithColor(Color.Green)
-                .Build();
-
-            var msg = await ReplyAsync(embed: embed, components: builder.Build());
-            UserFarmMessages[Context.User.Id] = msg;
-        }
-
-        public static async Task HandleFarmButtonAsync(SocketMessageComponent component)
-        {
-            var userId = component.User.Id;
-
-            if (!UserFarmData.ContainsKey(userId))
-                UserFarmData[userId] = new Dictionary<string, (DateTime, string)>();
-
-            var farmData = UserFarmData[userId];
-
-            string key = component.Data.CustomId;
-
-            var json = await File.ReadAllTextAsync(DataPath);
-            var gewassen = JsonSerializer.Deserialize<Dictionary<string, Gewas>>(json) ?? new Dictionary<string, Gewas>();
-            var tarwe = gewassen["tarwe"];
-
-            if (!farmData.ContainsKey(key))
-            {
-                farmData[key] = (DateTime.UtcNow, "tarwe");
-                await component.RespondAsync("🌱 Tarwe geplant! Kom later terug om te oogsten.", ephemeral: true);
-            }
-            else
-            {
-                var (startTime, _) = farmData[key];
-                bool gegroeid = (DateTime.UtcNow - startTime).TotalSeconds >= tarwe.groeitijd_dagen;
-
-                if (gegroeid)
-                {
-                    Database.AddCoins(userId, tarwe.coins);
-                    farmData.Remove(key);
-                    await component.RespondAsync($"💰 Je hebt {tarwe.coins} coins ontvangen!", ephemeral: true);
-                }
-                else
-                {
-                    await component.RespondAsync("❌ Dit gewas is nog niet gegroeid!", ephemeral: true);
-                }
-            }
-
-            if (UserFarmMessages.ContainsKey(userId))
-            {
-                var msg = UserFarmMessages[userId];
-                var builder = BuildFarmButtons(userId, tarwe);
-                await msg.ModifyAsync(m => m.Components = builder.Build());
-            }
-        }
-
-        private static ComponentBuilder BuildFarmButtons(ulong userId, Gewas tarwe)
-        {
             var builder = new ComponentBuilder();
-            var farmData = UserFarmData[userId];
 
-            for (int row = 0; row < 4; row++)
+            // 5x5 grid van 🌾 Tarwe
+            for (int row = 0; row < 5; row++)
             {
                 var actionRow = new ActionRowBuilder();
-                for (int col = 0; col < 4; col++)
+                for (int col = 0; col < 5; col++)
                 {
-                    string key = $"cell_{row}_{col}";
-                    bool gegroeid = false;
-
-                    if (farmData.ContainsKey(key))
-                    {
-                        var (startTime, _) = farmData[key];
-                        gegroeid = (DateTime.UtcNow - startTime).TotalSeconds >= tarwe.groeitijd_dagen;
-                    }
-
-                    actionRow.AddComponent(new ButtonBuilder()
-                        .WithCustomId(key)
-                        .WithLabel(gegroeid ? "🌾" : "❌")
-                        .WithStyle(gegroeid ? ButtonStyle.Success : ButtonStyle.Secondary));
+                    string customId = $"farm_{row}_{col}";
+                    actionRow.WithButton("🌾", customId, ButtonStyle.Primary);
                 }
                 builder.AddRow(actionRow);
             }
 
-            return builder;
+            var embed = new EmbedBuilder()
+                .WithTitle("🌾 Boerderij")
+                .WithDescription("Klik op een vakje om het gewas te oogsten!")
+                .WithColor(Color.Green)
+                .Build();
+
+            var message = await ReplyAsync(embed: embed, components: builder.Build());
+
+            var client = Context.Client as DiscordSocketClient;
+            client.ButtonExecuted -= FarmButtonHandler;
+            client.ButtonExecuted += FarmButtonHandler;
         }
 
-        private static async Task RefreshAllFarmMessages()
+        private async Task FarmButtonHandler(SocketMessageComponent component)
         {
-            if (!File.Exists(DataPath)) return;
+            if (!component.Data.CustomId.StartsWith("farm_")) return;
 
-            var gewassen = JsonSerializer.Deserialize<Dictionary<string, Gewas>>(await File.ReadAllTextAsync(DataPath)) ?? new Dictionary<string, Gewas>();
             if (!gewassen.ContainsKey("tarwe")) return;
             var tarwe = gewassen["tarwe"];
+            int coinsToAdd = tarwe.coins;
 
-            foreach (var kvp in UserFarmMessages)
+            var oldComponent = component.Message.Components;
+            var newBuilder = new ComponentBuilder();
+
+            foreach (var rowComp in oldComponent)
             {
-                ulong userId = kvp.Key;
-                var msg = kvp.Value;
-
-                if (!UserFarmData.ContainsKey(userId)) continue;
-
-                var builder = BuildFarmButtons(userId, tarwe);
-                await msg.ModifyAsync(m => m.Components = builder.Build());
+                if (rowComp is ActionRowComponent actionRow)
+                {
+                    var newRow = new ActionRowBuilder();
+                    foreach (var btnComp in actionRow.Components)
+                    {
+                        if (btnComp is ButtonComponent btn)
+                        {
+                            if (btn.CustomId == component.Data.CustomId)
+                                newRow.WithButton("⬛", btn.CustomId, ButtonStyle.Secondary, disabled: true);
+                            else
+                                newRow.WithButton(btn.Label, btn.CustomId, btn.Style, disabled: btn.IsDisabled);
+                        }
+                    }
+                    newBuilder.AddRow(newRow);
+                }
             }
+
+            // Coins toevoegen
+            Database.AddCoins(component.User.Id, coinsToAdd);
+            int totalCoins = Database.GetCoins(component.User.Id);
+
+            await component.UpdateAsync(msg =>
+            {
+                msg.Components = newBuilder.Build();
+                msg.Content = $"💰 {component.User.Mention} oogstte een gewas en kreeg {coinsToAdd} coins! Totaal: {totalCoins} coins.";
+            });
+
+            // Gewas groeit terug na 5 seconden
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(5000);
+                var restoredBuilder = new ComponentBuilder();
+                var oldRows = newBuilder.Build().Components;
+
+                foreach (var rowComp in oldRows)
+                {
+                    if (rowComp is ActionRowComponent actionRow)
+                    {
+                        var newRow = new ActionRowBuilder();
+                        foreach (var btnComp in actionRow.Components)
+                        {
+                            if (btnComp is ButtonComponent btn)
+                            {
+                                if (btn.CustomId == component.Data.CustomId)
+                                    newRow.WithButton("🌾", btn.CustomId, ButtonStyle.Primary);
+                                else
+                                    newRow.WithButton(btn.Label, btn.CustomId, btn.Style, disabled: btn.IsDisabled);
+                            }
+                        }
+                        restoredBuilder.AddRow(newRow);
+                    }
+                }
+
+                await component.Message.ModifyAsync(msg => msg.Components = restoredBuilder.Build());
+            });
         }
 
         private class Gewas
         {
-            public string naam { get; set; } = string.Empty;
+            public string Naam { get; set; }
             public int groeitijd_dagen { get; set; }
-            public string beschrijving { get; set; } = string.Empty;
+            public string Beschrijving { get; set; }
             public int coins { get; set; }
-        }
-    }
-
-    public static class Database
-    {
-        private static readonly Dictionary<ulong, int> coins = new Dictionary<ulong, int>();
-
-        public static void AddCoins(ulong userId, int amount)
-        {
-            if (!coins.ContainsKey(userId)) coins[userId] = 0;
-            coins[userId] += amount;
-        }
-
-        public static int GetCoins(ulong userId)
-        {
-            if (!coins.ContainsKey(userId)) return 0;
-            return coins[userId];
         }
     }
 }
