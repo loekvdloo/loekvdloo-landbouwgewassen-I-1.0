@@ -22,6 +22,16 @@ namespace LandbouwgewassenI.Commands
             await ReplyAsync($"👋 Hoi {Context.User.Mention}! Ik ben Landbouwgewassen I — jouw boerderij-assistent!");
         }
 
+        [Command("coin")]
+        public async Task CoinAsync()
+        {
+            var userId = Context.User.Id;
+            Database.AddCoins(userId, 1);
+
+            int coins = Database.GetCoins(userId);
+            await ReplyAsync($"💰 {Context.User.Mention}, je hebt nu {coins} coins!");
+        }
+
         [Command("help")]
         public async Task HelpAsync()
         {
@@ -48,7 +58,7 @@ namespace LandbouwgewassenI.Commands
 
             if (doc != null && doc.TryGetValue(gewasnaam.ToLowerInvariant(), out var gewas))
             {
-                var reply = $"**{gewas.Naam}**\nGroeitijd (dagen): {gewas.GroeitijdDays}\n{gewas.Beschrijving}";
+                var reply = $"**{gewas.Naam}**\nGroeitijd (dagen): {gewas.groeitijd_dagen}\n{gewas.Beschrijving}";
                 await ReplyAsync(reply);
             }
             else
@@ -60,7 +70,7 @@ namespace LandbouwgewassenI.Commands
         private class Gewas
         {
             public string Naam { get; set; }
-            public int GroeitijdDays { get; set; }
+            public int groeitijd_dagen { get; set; }
             public string Beschrijving { get; set; }
         }
     }
