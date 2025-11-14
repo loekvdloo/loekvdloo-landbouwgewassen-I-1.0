@@ -68,11 +68,16 @@ namespace LandbouwgewassenI.Commands
         [Command("menu")]
         public async Task MenuAsync()
         {
+            var path = Path.Combine(AppContext.BaseDirectory, "Img", "land.png");
+
+            await Context.Channel.SendFileAsync(path);
+
             var builder = new ComponentBuilder()
                 .WithButton("💰 Coin", "menu_coin", ButtonStyle.Primary)
                 .WithButton("ℹ️ Help", "menu_help", ButtonStyle.Secondary)
                 .WithButton("🌾 Gewasinfo", "menu_gewas", ButtonStyle.Success)
                 .WithButton("🌱 Boerderij", "menu_farm", ButtonStyle.Secondary); // optioneel link naar farm
+
 
             var embed = new EmbedBuilder()
                 .WithTitle("📋 Landbouwgewassen Menu")
