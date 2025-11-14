@@ -1,20 +1,17 @@
 {
   "tarwe": {
-    "naam": "Tarwe",
-    "groeitijd_dagen": 10,
-    "beschrijving": "Tarwe is een graan dat veel in gematigde klimaten wordt verbouwd.",
-    "coins": 10
+    "Naam": "Tarwe",
+    "Coins": 10,
+    "Icon": "🌾"
   },
-  "ma�s": {
-    "naam": "Mais",
-    "groeitijd_dagen": 90,
-    "beschrijving": "Mais (mais) wordt gebruikt voor voer, voedsel en biobrandstof.",
-    "coins": 10
+  "mais": {
+    "Naam": "Mais",
+    "Coins": 20,
+    "Icon": "🌽"
   },
   "aardappel": {
-    "naam": "Aardappel",
-    "groeitijd_dagen": 80,
-    "beschrijving": "Aardappelen zijn knolgewassen met veel vari�teiten.",
-    "coins": 10
+    "Naam": "Aardappel",
+    "Coins": 30,
+    "Icon": "🥔"
   }
 }
