@@ -33,6 +33,7 @@ namespace LandbouwgewassenI
 
             _client.MessageReceived += HandleCommandAsync;
 
+
             
 
             if (string.IsNullOrWhiteSpace(bott))
